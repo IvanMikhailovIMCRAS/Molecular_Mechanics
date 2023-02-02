@@ -6,6 +6,19 @@ def periodic(coord, box):
             return coord - np.sign(coord) * box
         return coord
 
+class ForceField():
+    def __init__(self, r_c, att):
+        self.r_c = r_c
+        self.att = att
+        
+    def force(self, r):
+        if r < self.r_c:
+            return self.att * (1 - r / self.r_c)
+        else:
+            return 0.0
+        
+    
+
 class Box():
     def __init__(self,x,y):
         self.x = x
@@ -26,12 +39,11 @@ class Bead():
         self.y += self.v_y * dt + 0.5 * self.a_y * dt ** 2
 
 class System():
-    def __init__(self, dt, n, box, r_c,att):
+    def __init__(self, dt, n, box, ff):
         self.dt = dt
         self.n = n
         self.box = box
-        self.r_c = r_c
-        self.att = att
+        self.ff = ff
         self.lst_beads = list()
         self.dbl_list= [(i,j) for i in range(self.n-1) for j in range(i+1,self.n)]
         
@@ -39,20 +51,16 @@ class System():
         X = np.random.uniform(-self.box.x/2, self.box.x/2, self.n)
         Y = np.random.uniform(-self.box.y/2, self.box.y/2, self.n)
         self.lst_beads=[Bead(x,y) for x,y in zip(X,Y)]
-    def force(self,r):
-        if r<self.r_c:
-            return self.att * (1 - r / self.r_c)
-        else:
-            return 0.0
+    
     def pair_interaction(self,bead1,bead2):
         dx = bead1.x - bead2.x
         dy = bead1.y - bead2.y
         dx, dy = self.box.periodic_correct(dx, dy)
         r = np.sqrt(dx**2+dy**2)
-        bead1.a_x += self.force(r)*dx/r
-        bead1.a_y += self.force(r)*dy/r
-        bead2.a_x += -self.force(r)*dx/r
-        bead2.a_y += -self.force(r)*dy/r
+        bead1.a_x += self.ff.force(r)*dx/r
+        bead1.a_y += self.ff.force(r)*dy/r
+        bead2.a_x += -self.ff.force(r)*dx/r
+        bead2.a_y += -self.ff.force(r)*dy/r
     def step(self):
         for b in self.lst_beads:
             b.a_x = 0
@@ -63,6 +71,7 @@ class System():
             b.move_bead(self.dt)  
             b.x, b.y = self.box.periodic_correct(b.x, b.y)  
               
+    
 def show_beads(sys):
     plt.figure(figsize=(5,5))
     x = [bead.x for bead in sys.lst_beads]
@@ -74,7 +83,8 @@ def show_beads(sys):
       
 if __name__ == '__main__':
     box = Box(5,5)    
-    sys = System(dt = 0.1, n = 75, box=box, r_c = 1.0, att = 1.0)
+    ff = ForceField(r_c = 1.0, att = 1.0)
+    sys = System(dt = 0.1, n = 75, box=box, ff=ff)
     sys.initial_configuration()
     show_beads(sys)
     for _ in range(100):

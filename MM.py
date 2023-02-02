@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 def periodic(coord, box):
         if abs(coord) > 0.5 * box: 
@@ -72,21 +73,33 @@ class System():
             b.x, b.y = self.box.periodic_correct(b.x, b.y)  
               
     
-def show_beads(sys):
+def show_beads(sys, namefile='Pic', num_pic=-1):
     plt.figure(figsize=(5,5))
     x = [bead.x for bead in sys.lst_beads]
     y = [bead.y for bead in sys.lst_beads]
     plt.plot(x,y,'o')
     plt.xlim(-sys.box.x/2, sys.box.x/2)
     plt.ylim(-sys.box.y/2, sys.box.y/2)
-    plt.show()
+    if num_pic < 0:
+        plt.show()
+    else:
+        namefile = namefile + '{:04d}'.format(num_pic) + '.jpg'
+        plt.savefig(namefile)  
+
+def animation(delay=10, loop=0, namegif='animatedGIF'):
+    #Gifanimationmaker should be installed: sudo apt-get install imagemagick
+    os.system(f'convert -delay {delay} -loop {loop} *.jpeg {namegif}.gif')
+    os.system('rm *.jpg') 
+       
       
 if __name__ == '__main__':
     box = Box(5,5)    
     ff = ForceField(r_c = 1.0, att = 1.0)
     sys = System(dt = 0.1, n = 75, box=box, ff=ff)
     sys.initial_configuration()
-    show_beads(sys)
-    for _ in range(100):
+    show_beads(sys, num_pic=0)
+    for n_step in range(100):
         sys.step()
-    show_beads(sys)
+        show_beads(sys, num_pic=n_step+1)
+    animation()
+    
